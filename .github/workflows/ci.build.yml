@@ -6,7 +6,7 @@ name: Build Docker Image
 env:
   WORKING_DIR: .
   GHCR_REGISTRY: ghcr.io
-  GHCR_IMAGE: ghcr.io/ochom/proxy-man
+  GHCR_IMAGE: ghcr.io/solami-limited/proxy-man
   GHCR_REGISTRY_USERNAME: ${{ github.actor }}
   GHCR_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
@@ -41,7 +41,7 @@ jobs:
       - name: Get container name
         id: container
         run: |
-          prefix="ghcr.io/ochom/"
+          prefix="ghcr.io/solami-limited/"
           name=${{ env.GHCR_IMAGE }}
           echo "CONTAINER_NAME=${name#$prefix}" >> "$GITHUB_OUTPUT"
 
@@ -49,6 +49,6 @@ jobs:
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          organization: ochom
+          organization: solami-limited
           container: ${{ steps.container.outputs.CONTAINER_NAME }}
           prune-untagged: true
