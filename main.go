@@ -55,6 +55,10 @@ func main() {
 
 		return c.JSON(res)
 	})
+
+	if err := app.Listen(":8080"); err != nil {
+		logs.Error("could not proxy-man's server")
+	}
 }
 
 func doRequest(method, url string, headers map[string]string, body []byte) ([]byte, error) {
