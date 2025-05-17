@@ -1,0 +1,73 @@
+services:
+  daraja:
+    image: registry.digitalocean.com/solami/kwikbet-payment-daraja:latest
+    restart: always
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: stop-first
+    ports:
+      - target: 5000
+        protocol: tcp
+    env_file:
+      - .env.daraja
+    volumes:
+      - ./daraja-data/cert:/app/kwikbet/cert
+    logging:
+          driver: "json-file" 
+          options:
+              max-size: "50m"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.daraja.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.daraja.entrypoints=web"
+      - "traefik.http.services.daraja.loadbalancer.server.port=5000"
+  
+              
+  proxyman:
+    image: ochom/proxy-man:latest
+    restart: always
+    ports:
+      - target: 8080
+        protocol: tcp
+    deploy:
+      mode: replicated
+      replicas: 5
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: stop-first
+    logging:
+          driver: "json-file" 
+          options:
+              max-size: "50m"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.proxyman.entrypoints=web"
+      - "traefik.http.services.proxyman.loadbalancer.server.port=8080"
+      - "traefik.http.routers.proxy-man.rule=PathPrefix(`/proxy-man`)"
+      - "traefik.http.routers.proxy-man.middlewares=strip-proxy-man"
+      - "traefik.http.middlewares.strip-proxy-man.stripprefix.prefixes=/proxy-man"
+      - "traefik.http.middlewares.strip-proxy-man.stripprefix.forceSlash=false"
+
+  nginx:
+    image: traefik:v3.0
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    restart: always
+    depends_on: 
+      - proxyman
+      - daraja
+    ports:
+      - "8000:80"
+      - "8080:8080" # Traefik dashboard
+    logging:
+          driver: "json-file" 
+          options:
+              max-size: "50m"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
