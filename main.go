@@ -11,15 +11,16 @@ import (
 	"github.com/ochom/gutils/logs"
 )
 
-type Payload struct {
+type Request struct {
 	Method  string            `json:"method"`
 	Url     string            `json:"url"`
 	Headers map[string]string `json:"headers"`
-	Body    []byte            `json:"body"`
+	Body    any               `json:"body"`
+	payload []byte
 }
 
 // Validate  ...
-func (p *Payload) Validate() error {
+func (p *Request) Validate() error {
 	if p.Method == "" {
 		return fmt.Errorf("method is required")
 	}
@@ -30,8 +31,23 @@ func (p *Payload) Validate() error {
 		p.Headers = make(map[string]string)
 	}
 	if p.Body == nil {
-		p.Body = []byte{}
+		p.payload = []byte{}
 	}
+
+	if p.Body != nil {
+		// if body is already a byte array, no need to convert
+		if _, ok := p.Body.([]byte); ok {
+			p.payload = p.Body.([]byte)
+		}
+
+		// is body is a string, convert to byte array
+		if _, ok := p.Body.(string); ok {
+			p.payload = []byte(p.Body.(string))
+		}
+
+		p.payload = helpers.ToBytes(p.Body)
+	}
+
 	return nil
 }
 
@@ -49,18 +65,18 @@ func main() {
 	app.Post("/proxy", func(c *fiber.Ctx) error {
 		logs.Info("request received: %s", string(c.BodyRaw()))
 
-		var payload Payload
-		if err := c.BodyParser(&payload); err != nil {
+		var req Request
+		if err := c.BodyParser(&req); err != nil {
 			logs.Error("parsing request, %s", err.Error())
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		if err := payload.Validate(); err != nil {
+		if err := req.Validate(); err != nil {
 			logs.Error("validating request, %s", err.Error())
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		res, err := doRequest(payload.Method, payload.Url, payload.Headers, payload.Body)
+		res, err := doRequest(req)
 		if err != nil {
 			logs.Error("sending request, %s", err.Error())
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
@@ -81,14 +97,14 @@ func main() {
 	}
 }
 
-func doRequest(method, url string, headers map[string]string, body []byte) ([]byte, error) {
-	switch method {
+func doRequest(req Request) ([]byte, error) {
+	switch req.Method {
 	case "GET":
-		return handleGetRequest(url, headers)
+		return handleGetRequest(req.Url, req.Headers)
 	case "POST", "PUT", "DELETE":
-		return handlePostRequest(method, url, headers, body)
+		return handlePostRequest(req.Method, req.Url, req.Headers, req.payload)
 	default:
-		return nil, fmt.Errorf("unsupported method: %s", method)
+		return nil, fmt.Errorf("unsupported method: %s", req.Method)
 	}
 }
 
