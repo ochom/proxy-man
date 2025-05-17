@@ -35,6 +35,10 @@ func (p *Payload) Validate() error {
 func main() {
 	app := fiber.New()
 
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
+	})
+
 	app.Post("/proxy", func(c *fiber.Ctx) error {
 		var payload Payload
 		if err := c.BodyParser(&payload); err != nil {
