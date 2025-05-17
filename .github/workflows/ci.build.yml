@@ -1,0 +1,54 @@
+name: Build Docker Image
+"on":
+  push:
+    branches: [dev]
+
+env:
+  WORKING_DIR: .
+  GHCR_REGISTRY: ghcr.io
+  GHCR_IMAGE: ghcr.io/ochom/proxy-man
+  GHCR_REGISTRY_USERNAME: ${{ github.actor }}
+  GHCR_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ env.GHCR_REGISTRY_USERNAME }}
+          password: ${{ env.GHCR_REGISTRY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.GHCR_IMAGE }}:dev
+          file: ./${{ env.WORKING_DIR }}/Dockerfile
+
+  cleanup:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get container name
+        id: container
+        run: |
+          prefix="ghcr.io/ochom/"
+          name=${{ env.GHCR_IMAGE }}
+          echo "CONTAINER_NAME=${name#$prefix}" >> "$GITHUB_OUTPUT"
+
+      - name: Remove untagged images
+        uses: vlaurin/action-ghcr-prune@v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          organization: ochom
+          container: ${{ steps.container.outputs.CONTAINER_NAME }}
+          prune-untagged: true
