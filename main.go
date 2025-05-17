@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -57,7 +58,13 @@ func main() {
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		return c.JSON(res)
+		var resp any
+		if err := json.Unmarshal(res, &resp); err != nil {
+			logs.Error("unmarshalling response, %s", err.Error())
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.JSON(resp)
 	})
 
 	if err := app.Listen(":8080"); err != nil {
