@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/ochom/gutils/gttp"
+	"github.com/ochom/gutils/helpers"
 	"github.com/ochom/gutils/logs"
 )
 
@@ -35,12 +37,17 @@ func (p *Payload) Validate() error {
 
 func main() {
 	app := fiber.New()
+	app.Use(logger.New(logger.Config{
+		Format: "${time} ${status} ${latency} ${method} ${path}\n",
+	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
 
 	app.Post("/proxy", func(c *fiber.Ctx) error {
+		logs.Info("request received: %s", string(c.BodyRaw()))
+
 		var payload Payload
 		if err := c.BodyParser(&payload); err != nil {
 			logs.Error("parsing request, %s", err.Error())
@@ -64,6 +71,7 @@ func main() {
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
+		logs.Info("response: %s", string(helpers.ToBytes(resp)))
 		return c.JSON(resp)
 	})
 
