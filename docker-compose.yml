@@ -1,10 +1,32 @@
 services:
-  proxy-man:
+  proxyman:
     image: ochom/proxy-man:latest
+    restart: always
     ports:
-      - "1021-1025:8080"
+      - target: 8080
+        protocol: tcp
     deploy:
       mode: replicated
       replicas: 5
-      restart_policy:
-        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: stop-first
+    logging:
+          driver: "json-file" 
+          options:
+              max-size: "50m"
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    depends_on: 
+      - proxyman
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    logging:
+          driver: "json-file" 
+          options:
+              max-size: "50m"
