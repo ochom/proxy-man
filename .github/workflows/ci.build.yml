@@ -5,10 +5,9 @@ name: Build Docker Image
 
 env:
   WORKING_DIR: .
-  GHCR_REGISTRY: ghcr.io
-  GHCR_IMAGE: ghcr.io/solami-limited/proxy-man
-  GHCR_REGISTRY_USERNAME: ${{ github.actor }}
-  GHCR_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  DOCKER_IMAGE: ochom/proxy-man
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
   build:
@@ -20,35 +19,15 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Login to GHCR
+      - name: Login to Docker Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ env.GHCR_REGISTRY_USERNAME }}
-          password: ${{ env.GHCR_REGISTRY_PASSWORD }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ env.GHCR_IMAGE }}:dev
+          tags: ${{ env.DOCKER_IMAGE }}:latest
           file: ./${{ env.WORKING_DIR }}/Dockerfile
-
-  cleanup:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Get container name
-        id: container
-        run: |
-          prefix="ghcr.io/solami-limited/"
-          name=${{ env.GHCR_IMAGE }}
-          echo "CONTAINER_NAME=${name#$prefix}" >> "$GITHUB_OUTPUT"
-
-      - name: Remove untagged images
-        uses: vlaurin/action-ghcr-prune@v0.6.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          organization: solami-limited
-          container: ${{ steps.container.outputs.CONTAINER_NAME }}
-          prune-untagged: true
