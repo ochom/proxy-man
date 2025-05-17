@@ -38,7 +38,8 @@ func (p *Payload) Validate() error {
 func main() {
 	app := fiber.New()
 	app.Use(logger.New(logger.Config{
-		Format: "${time} ${status} ${latency} ${method} ${path}\n",
+		Format:     "${time}  ${method} ${path} ${status} ${latency}\n",
+		TimeFormat: "2006/01/02 15:04:05",
 	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
