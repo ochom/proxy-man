@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/ochom/gutils/gttp"
-	"github.com/ochom/gutils/helpers"
+	"github.com/ochom/gutils/jsonx"
 	"github.com/ochom/gutils/logs"
 )
 
@@ -45,7 +45,7 @@ func (p *Request) Validate() error {
 			p.payload = []byte(p.Body.(string))
 		}
 
-		p.payload = helpers.ToBytes(p.Body)
+		p.payload = jsonx.Encode(p.Body)
 	}
 
 	return nil
@@ -78,17 +78,18 @@ func main() {
 
 		res, err := doRequest(req)
 		if err != nil {
-			logs.Error("sending request, %s", err.Error())
+			logs.Error("sending request, method: %s, url: %s, %s", req.Method, req.Url, err.Error())
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
 		var resp any
 		if err := json.Unmarshal(res, &resp); err != nil {
-			logs.Error("unmarshalling response, %s", err.Error())
+			logs.Error("unmarshalling response, method: %s, url: %s, %s", req.Method, req.Url, err.Error())
+			logs.Error("response: %s", string(res))
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		logs.Info("response: %s", string(helpers.ToBytes(resp)))
+		logs.Info("response: %s", string(res))
 		return c.JSON(resp)
 	})
 
